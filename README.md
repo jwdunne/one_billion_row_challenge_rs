@@ -64,8 +64,9 @@ $ just flamegraph naive_1
 
 ### 1. Naive
 
-| Binary | `naive_1` |
+| | |
 | -- | -- |
+| Binary | `naive_1` |
 | Mean running time | 1.350s (+/- 0.021s) | 
 
 Straight forward implementation using `std::collections::HashMap` and a `Stats` record keeping ongoing stats, with the final mean computed at the end.

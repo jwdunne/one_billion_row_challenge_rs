@@ -1,13 +1,36 @@
 use std::{
     collections::HashMap,
+    env,
     fs::File,
     io::{BufRead, BufReader},
 };
 
+struct Stats {
+    min: f64,
+    mean: f64,
+    max: f64,
+    sum: f64,
+    count: f64,
+}
+
+impl Stats {
+    fn new(temp: f64) -> Self {
+        Self {
+            min: temp,
+            mean: temp,
+            max: temp,
+            sum: temp,
+            count: 1.0,
+        }
+    }
+}
+
 fn main() {
-    let file = File::open("data/weather_stations.csv").unwrap();
+    let filename = env::args().nth(1).expect("expected filename argument");
+
+    let file = File::open(filename).unwrap();
     let reader = BufReader::new(file);
-    let mut stations: HashMap<String, Vec<f64>> = HashMap::new();
+    let mut stations: HashMap<String, Stats> = HashMap::new();
 
     for line in reader.lines() {
         let line = line.unwrap();
@@ -18,6 +41,32 @@ fn main() {
 
         let (name, temp) = line.split_once(';').unwrap();
         let temp: f64 = temp.parse().unwrap();
-        stations.entry(name.to_string()).or_default().push(temp);
+
+        if let Some(station) = stations.get_mut(name) {
+            station.min = temp.min(station.min);
+            station.max = temp.max(station.max);
+            station.sum = temp + station.sum;
+            station.count += 1.0;
+            station.mean = station.sum / station.count;
+        } else {
+            let name = name.to_string();
+            stations.insert(name, Stats::new(temp));
+        }
     }
+
+    let mut entries: Vec<_> = stations.iter().collect();
+
+    entries.sort_unstable_by_key(|station| station.0);
+
+    print!("{{");
+    for (i, (name, stats)) in entries.iter().enumerate() {
+        let separator = if i != entries.len() - 1 { ", " } else { "" };
+        print!(
+            "{name}={min:.1}/{mean:.1}/{max:.1}{separator}",
+            min = stats.min,
+            mean = stats.mean,
+            max = stats.max
+        );
+    }
+    println!("}}");
 }

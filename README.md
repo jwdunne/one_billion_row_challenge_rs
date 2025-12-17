@@ -71,4 +71,17 @@ $ just flamegraph naive_1
 
 Straight forward implementation using `std::collections::HashMap` and a `Stats` record keeping ongoing stats, with the final mean computed at the end.
 
-Surprisingly, I/O is not the bottleneck. It's the `HashMap`, with call to `HashMap::get_mut` taking up 41% of the running time. Cutting this down is, then, our main objective for now.
+Surprisingly, I/O is not the bottleneck. It's the `HashMap`, with call to `HashMap::get_mut` taking up 45.7% of the running time. Cutting this down is our main objective for now.
+
+### 2. `hashbrown`
+
+| | |
+| -- | -- |
+| Binary | `hashbrown_1` |
+| Mean running time | 1.096s (+/- 0.010s) |
+
+Rust uses `hashbrown` under the hood, a Rust implementation of Swiss Tables. Despite this, Rust does not provide the `HashMap::entry_ref` API, which allows us to look up a key by `&str`, and make modifications. 
+
+The `hashbrown` crate does provide this - switching to `HashMap::entry_ref` led to a significant improvement in running time.
+
+The flame graph, however, shows we're still spending 41% of our running time on `HashMap::entry_ref`, with ~33% spent comparing slices. 

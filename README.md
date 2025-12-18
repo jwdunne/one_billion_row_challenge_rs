@@ -66,7 +66,7 @@ $ just flamegraph naive_1
 
 | | |
 | -- | -- |
-| Binary | `naive_1` |
+| Binary | `naive` |
 | Mean running time (10m) | 1.350s (+/- 0.021s) | 
 
 Straight forward implementation using `std::collections::HashMap` and a `Stats` record keeping ongoing stats, with the final mean computed at the end.
@@ -77,7 +77,7 @@ Surprisingly, I/O is not the bottleneck. It's the `HashMap`, with call to `HashM
 
 | | |
 | -- | -- |
-| Binary | `hashbrown_2` |
+| Binary | `hashbrown` |
 | Mean running time (10m) | 1.096s (+/- 0.010s) |
 
 Rust uses `hashbrown` under the hood, a Rust implementation of Swiss Tables. Despite this, Rust does not provide the `HashMap::entry_ref` API, which allows us to look up a key by `&str`, and make modifications. 
@@ -90,7 +90,7 @@ The flame graph, however, shows we're still spending 41% of our running time on 
 
 | | |
 | -- | -- |
-| Binary | `io_stack_buffer_3` |
+| Binary | `io_stack_buffer` |
 | Mean running time (10m) | 815.7ms (+/- 11.3ms) |
 
 We were spending almost 30% of the running time reading the input file line-by-line. Instead, we use a 4MB stack-allocated buffer. This led to a significant drop in total running time, with ~12% of the running time spent on iterating the input file. The logical conclusion of this approach is, of course, memory mapping the entire file. But there are other opportunities in the meantime.
@@ -103,7 +103,7 @@ We could also experiment with a larger, heap-allocated buffer to see if we can r
 
 | | |
 | -- | -- |
-| Binary | `parsing_4` |
+| Binary | `parsing` |
 | Mean running time (10m) | 452.3ms (+/- 6.0ms) |
 
 Parsing to a UTF-8 string, and then parsing an `f64` from this, is slow. We eliminate this by using a vector of bytes as `HashMap` keys directly (using a slice with `hashbrown::HashMap::entry_mut` so a `Vec` is only allocated on new entries).

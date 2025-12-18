@@ -98,3 +98,26 @@ We were spending almost 30% of the running time reading the input file line-by-l
 We're now spending 11% of the time converting to a UTF8 string, and then 9.4% of the time on splitting into name and temperature parts. On top of this, we spend 10.5% of the time parsing the temperature string into a float. In total, ~31% is spent on this.
 
 We could also experiment with a larger, heap-allocated buffer to see if we can reduce the 12% further ahead of memory mapping.
+
+### 4. Optimised parsing
+
+| | |
+| -- | -- |
+| Binary | `parsing_4` |
+| Mean running time (10m) | 452.3ms (+/- 6.0ms) |
+
+Parsing to a UTF-8 string, and then parsing an `f64` from this, is slow. We eliminate this by using a vector of bytes as `HashMap` keys directly (using a slice with `hashbrown::HashMap::entry_mut` so a `Vec` is only allocated on new entries).
+
+We also eliminate parsing to floating point entirely by parsing the bytes to integers multiplied by 10, given all readings are at most 3 digits with a single decimal place.
+
+The flame graph still shows a significant amount of time spent on `HashMap` lookups (~52%). In later attempts, we should explore tries, especially cache-friendly options such as HAT-tries.
+
+In the mean time, there are other, more straight-forward opportunities:
+
+- ~20% of running time spent on splitting lines in the buffer
+- ~13% of running time spent finding the `;` byte in each line
+
+Instead, we could process the entire buffer as a stream:
+
+1. Read until `;` byte, which becomes the key
+2. Read until `\n` byte, which becomes the reading

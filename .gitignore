@@ -1,6 +1,5 @@
 /target
-/data/measurements.txt
-/data/test_measurements.txt
-/data/10m_measurements.txt
+/data/*
+!/data/weather_stations.csv
 /profiling
 perf*

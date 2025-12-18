@@ -121,3 +121,14 @@ Instead, we could process the entire buffer as a stream:
 
 1. Read until `;` byte, which becomes the key
 2. Read until `\n` byte, which becomes the reading
+
+### 5. Stream processing
+
+| | |
+| -- | -- |
+| Binary | `streaming` |
+| Mean running time (10m) | 375ms (+/- 4.5ms) |
+
+Splitting the read buffer into lines, and then scanning each line one byte at a time was taking up around 27% of the running time. Implementing a function optimised for searching bytes, 8 at a time using SWAR, and using it to scan for newlines reduced this down to 16% of the total running time - a modest improvement.
+
+With `HashMap` lookups taking a majority of the time, this must our next focus.

@@ -26,3 +26,7 @@ path = "src/bin/003_io_stack_buffer.rs"
 [[bin]]
 name = "parsing"
 path = "src/bin/004_parsing.rs"
+
+[[bin]]
+name = "stream"
+path = "src/bin/005_stream.rs"

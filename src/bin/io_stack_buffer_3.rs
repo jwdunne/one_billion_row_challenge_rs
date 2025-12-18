@@ -2,7 +2,7 @@ use hashbrown::HashMap;
 use std::{
     env,
     fs::File,
-    io::{self, BufRead, BufReader, Read},
+    io::{self, BufReader, Read},
 };
 
 struct Stats {

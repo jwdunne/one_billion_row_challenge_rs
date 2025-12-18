@@ -3,7 +3,6 @@ use std::{
     env,
     fs::File,
     io::{self, BufRead, BufReader, Read},
-    str::Utf8Error,
 };
 
 struct Stats {

@@ -20,6 +20,6 @@ fn main() {
 
     println!(
         "min={min} max={max} mean={mean}",
-        mean = (total / &names.len())
+        mean = (total / names.len())
     );
 }

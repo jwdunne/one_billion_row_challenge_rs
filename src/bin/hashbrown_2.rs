@@ -44,7 +44,7 @@ fn main() {
 
         station.min = temp.min(station.min);
         station.max = temp.max(station.max);
-        station.sum = temp + station.sum;
+        station.sum += temp;
         station.count += 1.0;
     }
 

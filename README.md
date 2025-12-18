@@ -67,7 +67,7 @@ $ just flamegraph naive_1
 | | |
 | -- | -- |
 | Binary | `naive_1` |
-| Mean running time | 1.350s (+/- 0.021s) | 
+| Mean running time (10m) | 1.350s (+/- 0.021s) | 
 
 Straight forward implementation using `std::collections::HashMap` and a `Stats` record keeping ongoing stats, with the final mean computed at the end.
 
@@ -77,11 +77,24 @@ Surprisingly, I/O is not the bottleneck. It's the `HashMap`, with call to `HashM
 
 | | |
 | -- | -- |
-| Binary | `hashbrown_1` |
-| Mean running time | 1.096s (+/- 0.010s) |
+| Binary | `hashbrown_2` |
+| Mean running time (10m) | 1.096s (+/- 0.010s) |
 
 Rust uses `hashbrown` under the hood, a Rust implementation of Swiss Tables. Despite this, Rust does not provide the `HashMap::entry_ref` API, which allows us to look up a key by `&str`, and make modifications. 
 
 The `hashbrown` crate does provide this - switching to `HashMap::entry_ref` led to a significant improvement in running time.
 
 The flame graph, however, shows we're still spending 41% of our running time on `HashMap::entry_ref`, with ~33% spent comparing slices. 
+
+### 3. Buffering I/O (stack-allocated)
+
+| | |
+| -- | -- |
+| Binary | `io_stack_buffer_3` |
+| Mean running time (10m) | 815.7ms (+/- 11.3ms) |
+
+We were spending almost 30% of the running time reading the input file line-by-line. Instead, we use a 4MB stack-allocated buffer. This led to a significant drop in total running time, with ~12% of the running time spent on iterating the input file. The logical conclusion of this approach is, of course, memory mapping the entire file. But there are other opportunities in the meantime.
+
+We're now spending 11% of the time converting to a UTF8 string, and then 9.4% of the time on splitting into name and temperature parts. On top of this, we spend 10.5% of the time parsing the temperature string into a float. In total, ~31% is spent on this.
+
+We could also experiment with a larger, heap-allocated buffer to see if we can reduce the 12% further ahead of memory mapping.

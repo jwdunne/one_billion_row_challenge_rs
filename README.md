@@ -132,3 +132,27 @@ Instead, we could process the entire buffer as a stream:
 Splitting the read buffer into lines, and then scanning each line one byte at a time was taking up around 27% of the running time. Implementing a function optimised for searching bytes, 8 at a time using SWAR, and using it to scan for newlines reduced this down to 16% of the total running time - a modest improvement.
 
 With `HashMap` lookups taking a majority of the time, this must our next focus.
+
+### 6. Custom hash table
+
+| | |
+| -- | -- |
+| Binary | `custom_hash_table` |
+| Mean running time (10m) | 380ms (+/- 3.8ms) |
+
+Up to now, `hashbrown::HashMap` has worked fine. But the time spent on lookups continued to dominate throughout. Implementing a custom hash table using open addressing, with algorithms tuned for the problem/inputs, achieves comparable performance overall whilst significantly reducing the time spent on looking up keys (30% vs 52%).
+
+This involved:
+
+- Designing an API to minimise repeat work in the hot loop rather than for generality
+- Implementing a hash function optimised for our list of names
+- Designing a cache-friendly structure for entry metadata and statistics
+- Storing names separately since we don't need them
+
+This gives us room to experiment with other improvements:
+
+- Finding positions of `b';'` and `b'\n'` bytes
+- Parsing temperatures to integers
+- Memory-mapping the entire file
+- Parallelisation across cores
+- Instruction-level parallelisation 

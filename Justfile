@@ -5,17 +5,29 @@ test_path := 'data/10m_measurements.txt'
 test_num := '10_000_000'
 
 build BIN:
-    cargo build --release --bin={{BIN}}
+    RUSTFLAGS="-C target-feature=+aes" cargo build --release --bin={{BIN}}
 
 generate NUM=default_num PATH=default_path:
-    cargo run --release --bin=create_measurements {{NUM}} > {{PATH}}
+    RUSTFLAGS="-C target-feature=+aes" cargo run --release --bin=create_measurements {{NUM}} > {{PATH}}
 
 run BIN PATH=default_path: 
     cargo run --release --bin={{BIN}} {{PATH}}
 
 flamegraph BIN: (generate test_num test_path)
-    cargo flamegraph --output=profiling/flamegraph_{{BIN}}.svg --release --bin={{BIN}} -- {{test_path}} 1> /dev/null
+    RUSTFLAGS="-C target-feature=+aes" cargo flamegraph --output=profiling/flamegraph_{{BIN}}.svg --release --bin={{BIN}} -- {{test_path}} 1> /dev/null
 
-bench BIN: (generate test_num test_path) (build BIN)
-    hyperfine --warmup=3 './target/release/{{BIN}} {{test_path}} 1> /dev/null'
+bench BIN NUM=test_num DATA=test_path: (generate NUM DATA) (build BIN)
+    hyperfine --warmup=3 './target/release/{{BIN}} {{DATA}} 1> /dev/null'
+
+callgrind BIN: (build BIN)
+    valgrind \
+        --tool=callgrind \
+        --callgrind-out-file=./profiling/callgrind_{{BIN}}.out \
+        --collect-jumps=yes \
+        --collect-systime=yes \
+        --simulate-cache=yes \
+        ./target/release/{{BIN}} \
+        "$PWD/{{test_path}}"
+    rm -f ./profiling/callgrind_{{BIN}}_demangled.out
+    rustfilt -i ./profiling/callgrind_{{BIN}}.out -o ./profiling/callgrind_{{BIN}}_demangled.out
 

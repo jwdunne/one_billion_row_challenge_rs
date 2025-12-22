@@ -156,3 +156,20 @@ This gives us room to experiment with other improvements:
 - Memory-mapping the entire file
 - Parallelisation across cores
 - Instruction-level parallelisation 
+
+### 7. Optimised row reading
+
+| | |
+| -- | -- |
+| Binary | `reading_rows` |
+| Mean running time (10m) | 320ms (+/- 2.3ms) |
+
+The hot loop read lines one at a time, using an optimised implementation of `position`, which searched bytes 8 at a time. Instead, we can identify multiple lines and semicolon separators in one go. This is pretty fast using the SWAR technique we used in `ByteBuffer::byte_position`, but for CPUs with AVX2 support, this is much faster and simpler. With AVX2 intrinsics, identifying line and field separators drops from 25% of the running time, to 3%.
+
+Although we haven't, this gives us freedom to re-order operations for batching e.g:
+
+1. Read multiple lines
+2. Hash multiple names
+3. Prefetch multiple slots
+4. Look up multiple entries
+5. Update multiple entries

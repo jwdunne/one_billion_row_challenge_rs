@@ -22,6 +22,10 @@ pprof = { version = "0.11", features = ["flamegraph", "criterion"] }
 name = "hashtable"
 harness = false
 
+[[bench]]
+name = "byte_buffer"
+harness = false
+
 [[bin]]
 name = "naive"
 path = "src/bin/001_naive.rs"
@@ -45,3 +49,7 @@ path = "src/bin/005_stream.rs"
 [[bin]]
 name = "custom_hash_table"
 path = "src/bin/006_custom_hash_table.rs"
+
+[[bin]]
+name = "reading_rows"
+path = "src/bin/007_reading_rows.rs"

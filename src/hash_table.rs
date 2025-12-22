@@ -1,7 +1,7 @@
 // (2^64) / \phi
 const MAGIC_CONST: i64 = 0x9E3779B97F4A7C15u64 as i64;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[repr(C)]
 pub struct Entry {
     hash: u64,
@@ -13,21 +13,6 @@ pub struct Entry {
     pub max: i16,
     pub len: u8,
     _pad: [u8; 5],
-}
-
-impl Entry {
-    pub fn default() -> Self {
-        Self {
-            hash: 0,
-            prefix: 0,
-            sum: 0,
-            count: 0,
-            min: 0,
-            max: 0,
-            len: 0,
-            _pad: [0u8; 5],
-        }
-    }
 }
 
 pub struct Table {

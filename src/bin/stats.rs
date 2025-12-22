@@ -110,7 +110,7 @@ fn main() {
     }
 
     let mut slot_collisions: Vec<(&u64, &Vec<String>)> = slot_collisions.iter().collect();
-    slot_collisions.sort_unstable_by_key(|&(_, cs)| -1 * cs.len() as i32);
+    slot_collisions.sort_unstable_by_key(|&(_, cs)| -(cs.len() as i32));
 
     println!();
     println!(

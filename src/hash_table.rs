@@ -68,7 +68,8 @@ impl Table {
     }
 
     #[inline(always)]
-    pub fn prefetch(&self, slot: usize) {
+    pub fn prefetch(&self, hash: u64) {
+        let slot = hash as usize & (self.size - 1);
         unsafe {
             _mm_prefetch(self.data.as_ptr().add(slot) as *const i8, _MM_HINT_T0);
         }
@@ -79,19 +80,25 @@ impl Table {
         let size_mask = self.size - 1;
         let slot = hash as usize & size_mask;
 
-        for i in 0..5 {
-            let slot = (slot + i) & size_mask;
-            let data = unsafe { self.data.get_unchecked(slot) };
+        let d0 = unsafe { self.data.get_unchecked(slot) };
+        let d1 = unsafe { self.data.get_unchecked((slot + 1) & size_mask) };
+        let d2 = unsafe { self.data.get_unchecked((slot + 2) & size_mask) };
+        let d3 = unsafe { self.data.get_unchecked((slot + 3) & size_mask) };
+        let d4 = unsafe { self.data.get_unchecked((slot + 4) & size_mask) };
 
-            if data.hash == 0 || data.prefix == prefix && data.hash == hash {
-                return slot;
-            }
-        }
+        let m0 = ((d0.hash == 0) | ((d0.hash == hash) & (d0.prefix == prefix))) as u32;
+        let m1 = ((d1.hash == 0) | ((d1.hash == hash) & (d1.prefix == prefix))) as u32;
+        let m2 = ((d2.hash == 0) | ((d2.hash == hash) & (d2.prefix == prefix))) as u32;
+        let m3 = ((d3.hash == 0) | ((d3.hash == hash) & (d3.prefix == prefix))) as u32;
+        let m4 = ((d4.hash == 0) | ((d4.hash == hash) & (d4.prefix == prefix))) as u32;
 
-        slot + 4
+        let mask = m0 | (m1 << 1) | (m2 << 2) | (m3 << 3) | (m4 << 4);
+        let first = mask.trailing_zeros() as usize;
+
+        (slot + first) & size_mask
     }
 
-    #[inline(always)]
+    #[inline(never)]
     pub fn update(&mut self, slot: usize, hash: u64, prefix: u64, name: &[u8], temp: i16) {
         let len = name.len();
         let entry = unsafe { self.data.get_unchecked_mut(slot) };

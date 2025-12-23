@@ -194,3 +194,14 @@ For the prefix, we are only ever interested in the first 8 bytes, so we can use 
 The temperature parsing is an incredibly clever piece of code, which I shamelessly lifted from artsiomkorzun (I couldn't come up with on my own). My first attempt branchlessly constructed the temperature int via array access. My second used bit twiddling entirely, although this was ugly and inelegant, with lots of variable shifts, harming performance. The trick used by artsiomkorzun achieves this with zero branching and a very small number of variable bit shifts.
 
 Although impossible to eliminate all branching from the hash computation, we significantly reduced mispredictions by folding 8 byte or smaller and 16 byte or smaller paths into a single path, using bit masking to conditionally mix the suffix without branching.
+
+### 9. Batching
+
+| | |
+| -- | -- |
+| Binary | `batching` |
+| Mean running time (10m) | 236ms (+/- 2.3ms) |
+
+Experimented with processing multiple, independent regions at once, to encourage instruction-level processing. This was a modest success, though we're hitting marginal gains territory right now. I may experiment with the number of interleaved regions - right now it's 4 and it seems we spend roughly half the time in cleanup.
+
+Branching in `Table::lookup` was also eliminated. With the configured table size, probe depth never goes beyond 5.

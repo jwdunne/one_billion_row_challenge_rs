@@ -17,7 +17,7 @@ flamegraph BIN: (generate test_num test_path)
     RUSTFLAGS="-C target-feature=+avx2" cargo flamegraph --output=profiling/flamegraph_{{BIN}}.svg --release --bin={{BIN}} -- {{test_path}} 1> /dev/null
 
 bench BIN NUM=test_num DATA=test_path: (generate NUM DATA) (build BIN)
-    hyperfine --warmup=3 './target/release/{{BIN}} {{DATA}} 1> /dev/null'
+    hyperfine --warmup=5 './target/release/{{BIN}} {{DATA}} 1> /dev/null'
 
 callgrind BIN: (build BIN)
     valgrind \

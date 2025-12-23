@@ -57,3 +57,7 @@ path = "src/bin/007_reading_rows.rs"
 [[bin]]
 name = "branching"
 path = "src/bin/008_branching.rs"
+
+[[bin]]
+name = "batching"
+path = "src/bin/009_batching.rs"

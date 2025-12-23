@@ -12,12 +12,14 @@ const MAGIC_MULTIPLIER: u64 = 100 * 0x1000000 + 10 * 0x10000 + 1;
 #[inline(always)]
 fn parse_temp(bytes: &[u8]) -> i16 {
     let n = unsafe { (bytes.as_ptr() as *const u64).read_unaligned() } as u64;
+    let n = n & (1 << (bytes.len() * 8)) - 1;
+
     let dot = (!n & DOT_BITS).trailing_zeros();
-    let sign = (!n << 59) >> 63;
+    let sign = (((!n) << 59) as i64 >> 63) as u64;
     let mask = !(sign & 0xff);
     let digits = ((n & mask) << (28 - dot)) & 0xf000f0f00;
     let abs = ((digits * MAGIC_MULTIPLIER) >> 32) & 0x3FF;
-    ((abs ^ sign) - sign) as i16
+    ((abs ^ sign).wrapping_sub(sign)) as i16
 }
 
 fn main() -> io::Result<()> {

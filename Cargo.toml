@@ -53,3 +53,7 @@ path = "src/bin/006_custom_hash_table.rs"
 [[bin]]
 name = "reading_rows"
 path = "src/bin/007_reading_rows.rs"
+
+[[bin]]
+name = "branching"
+path = "src/bin/008_branching.rs"

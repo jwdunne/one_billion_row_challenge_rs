@@ -39,6 +39,8 @@ impl ByteBuffer for [u8] {
 
         None
     }
+
+    #[inline(always)]
     #[cfg(target_feature = "avx2")]
     fn find_delimiters(&self) -> (u32, u32) {
         let (semicolons, newlines) = unsafe {

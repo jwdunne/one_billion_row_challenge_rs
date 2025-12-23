@@ -22,7 +22,7 @@ impl City {
     }
 
     fn sample(&self, rng: &mut impl Rng) -> f64 {
-        self.distribution.sample(rng)
+        self.distribution.sample(rng).max(-99.9).min(99.9)
     }
 }
 

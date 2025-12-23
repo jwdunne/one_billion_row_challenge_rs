@@ -25,6 +25,7 @@ callgrind BIN: (build BIN)
         --callgrind-out-file=./profiling/callgrind_{{BIN}}.out \
         --collect-jumps=yes \
         --collect-systime=yes \
+        --branch-sim=yes \
         --simulate-cache=yes \
         ./target/release/{{BIN}} \
         "$PWD/{{test_path}}"

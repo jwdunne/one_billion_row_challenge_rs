@@ -1,3 +1,5 @@
+use std::arch::x86_64::{_MM_HINT_T0, _mm_prefetch};
+
 // (2^64) / \phi
 const MAGIC_CONST: i64 = 0x9E3779B97F4A7C15u64 as i64;
 
@@ -17,7 +19,7 @@ pub struct Entry {
 
 pub struct Table {
     data: Vec<Entry>,
-    names: Vec<[u8; 100]>,
+    names: Vec<[u8; 128]>,
     size: usize,
 }
 
@@ -25,22 +27,18 @@ impl Table {
     pub fn new(size: usize) -> Self {
         Self {
             data: vec![Entry::default(); size],
-            names: vec![[0u8; 100]; size],
+            names: vec![[0u8; 128]; size],
             size,
         }
     }
 
-    #[inline(always)]
     pub fn hash(name: &[u8]) -> (u64, u64) {
         let len = name.len();
         let prefix = Table::prefix(name);
-
-        if len <= 8 {
-            let hash = (prefix as i64).wrapping_mul(MAGIC_CONST);
-            return ((hash ^ (hash >> 35)) as u64, prefix);
-        }
-
-        let suffix = unsafe { (name.as_ptr().add(len - 8) as *const u64).read_unaligned() };
+        let suffix_offset = len.saturating_sub(8);
+        let suffix_mask = ((len > 8) as u64).wrapping_neg();
+        let suffix = unsafe { (name.as_ptr().add(suffix_offset) as *const u64).read_unaligned() }
+            & suffix_mask;
 
         if len <= 16 {
             let hash = ((prefix ^ suffix) as i64).wrapping_mul(MAGIC_CONST);
@@ -63,26 +61,17 @@ impl Table {
 
     #[inline(always)]
     pub fn prefix(name: &[u8]) -> u64 {
-        let len = name.len();
+        let len = name.len().min(8);
+        let mask = u64::MAX >> ((8 - len) * 8);
+        let bytes = unsafe { (name.as_ptr() as *const u64).read_unaligned() };
+        bytes & mask
+    }
 
-        if len >= 8 {
-            return unsafe { (name.as_ptr() as *const u64).read_unaligned() };
+    #[inline(always)]
+    pub fn prefetch(&self, slot: usize) {
+        unsafe {
+            _mm_prefetch(self.data.as_ptr().add(slot) as *const i8, _MM_HINT_T0);
         }
-
-        let bytes: [u8; 8] = match len {
-            1 => [name[0], 0, 0, 0, 0, 0, 0, 0],
-            2 => [name[0], name[1], 0, 0, 0, 0, 0, 0],
-            3 => [name[0], name[1], name[2], 0, 0, 0, 0, 0],
-            4 => [name[0], name[1], name[2], name[3], 0, 0, 0, 0],
-            5 => [name[0], name[1], name[2], name[3], name[4], 0, 0, 0],
-            6 => [name[0], name[1], name[2], name[3], name[4], name[5], 0, 0],
-            7 => [
-                name[0], name[1], name[2], name[3], name[4], name[5], name[6], 0,
-            ],
-            _ => unreachable!(),
-        };
-
-        u64::from_ne_bytes(bytes)
     }
 
     #[inline(always)]
@@ -126,8 +115,8 @@ impl Table {
         self.names[slot][..len].copy_from_slice(name);
     }
 
-    #[inline(always)]
-    pub fn entries(&self) -> Vec<(&[u8; 100], &Entry)> {
+    #[inline(never)]
+    pub fn entries(&self) -> Vec<(&[u8; 128], &Entry)> {
         self.data
             .iter()
             .enumerate()

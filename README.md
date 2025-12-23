@@ -173,3 +173,24 @@ Although we haven't, this gives us freedom to re-order operations for batching e
 3. Prefetch multiple slots
 4. Look up multiple entries
 5. Update multiple entries
+
+### 8. Branching (or lack thereof)
+
+| | |
+| -- | -- |
+| Binary | `branching` |
+| Mean running time (10m) | 245ms (+/- 1.6ms) |
+
+The flamegraph showed we still spent a significant amount of time:
+
+1. Computing prefixes
+2. Computing hashes
+3. Parsing temperatures
+
+Looking at the profiler, we could see a large number of branch mispredictions. We fixed this by eliminating branches from computing the prefix, and doing the same for temperature parsing (thanks to [artsiomkorzun](https://github.com/gunnarmorling/1brc/blob/main/src/main/java/dev/morling/onebrc/CalculateAverage_artsiomkorzun.java)).
+
+For the prefix, we are only ever interested in the first 8 bytes, so we can use that knowledge to construct a mask for the only the bits we're interested in, rather than constructing this via branching. 
+
+The temperature parsing is an incredibly clever piece of code, which I shamelessly lifted from artsiomkorzun (I couldn't come up with on my own). My first attempt branchlessly constructed the temperature int via array access. My second used bit twiddling entirely, although this was ugly and inelegant, with lots of variable shifts, harming performance. The trick used by artsiomkorzun achieves this with zero branching and a very small number of variable bit shifts.
+
+Although impossible to eliminate all branching from the hash computation, we significantly reduced mispredictions by folding 8 byte or smaller and 16 byte or smaller paths into a single path, using bit masking to conditionally mix the suffix without branching.

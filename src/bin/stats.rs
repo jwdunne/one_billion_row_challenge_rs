@@ -1,6 +1,6 @@
 use hashbrown::HashMap;
 use onebrc::hash_table::Table;
-use std::fs::read_to_string;
+use std::{fs::read_to_string, u64};
 
 fn main() {
     let mut names: Vec<_> = read_to_string("data/weather_stations.csv")
@@ -165,4 +165,39 @@ fn main() {
     for i in 10..20 {
         println!("1 << {} = {}", i, 1 << i);
     }
+
+    println!();
+    println!("== Masking ==");
+    for i in 1..8 {
+        let mask = (1 << (i * 8)) - 1;
+        println!("{}", fmt_to_nibbles(mask));
+        println!("{:#018x}", mask);
+    }
+
+    println!();
+    println!("== Branchless conditions ==");
+
+    for len in 0..16 {
+        println!(
+            "({len} > 8).wrapping_neg() = {:#018x}",
+            ((len > 8) as u64).wrapping_neg()
+        );
+        println!("{len} > 8 = {:#018x}", ((len > 8) as u64));
+    }
+
+    let mask1 = (true as u64).wrapping_neg();
+    let mask2 = (false as u64).wrapping_neg();
+    println!("{:#018x}", (1u64 ^ mask1) - mask1);
+    println!("{:#018x}", (1u64 ^ mask2) - mask2);
+}
+
+fn fmt_to_nibbles(n: u64) -> String {
+    let bitstr = format!("{:0>64b}", n);
+    bitstr
+        .as_bytes()
+        .chunks(4)
+        .map(str::from_utf8)
+        .collect::<Result<Vec<&str>, _>>()
+        .unwrap()
+        .join(" ")
 }

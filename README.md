@@ -216,3 +216,12 @@ Branching in `Table::lookup` was also eliminated. With the configured table size
 Quick change. Instead of manually managing buffers and all the bookkeeping that comes with it, we memory map the file.
 
 I wasn't happy with the additional complexity of 4 subdivided regions, so I've reduced this to 3 at no cost to performance.
+
+### 11. AVX512
+
+| | |
+| -- | -- |
+| Binary | `avx512` |
+| Mean running time (10m) | 212ms (+/- 3.3ms) |
+
+Another quick change. Use AVX512, since it's available on my CPU. This extends the window of semicolons and newlines we can identify from 32 to 64 bytes at a time. 

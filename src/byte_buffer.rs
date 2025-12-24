@@ -9,6 +9,9 @@ pub trait ByteBuffer {
     fn find_delimiters(&self) -> (u32, u32);
 
     fn find_delimiters_swar(&self) -> (u32, u32);
+
+    #[cfg(all(target_feature = "avx512f", target_feature = "avx512bw"))]
+    fn find_delimiters64(&self) -> (u64, u64);
 }
 
 impl ByteBuffer for [u8] {
@@ -38,6 +41,32 @@ impl ByteBuffer for [u8] {
         }
 
         None
+    }
+
+    #[inline(always)]
+    #[cfg(all(target_feature = "avx512f", target_feature = "avx512bw"))]
+    fn find_delimiters64(&self) -> (u64, u64) {
+        let (semi, nl) = unsafe {
+            #[cfg(target_arch = "x86")]
+            use std::arch::x86::{
+                __m512i, _mm512_cmpeq_epi8_mask, _mm512_loadu_si512, _mm512_set1_epi8,
+            };
+
+            #[cfg(target_arch = "x86_64")]
+            use std::arch::x86_64::{
+                __m512i, _mm512_cmpeq_epi8_mask, _mm512_loadu_si512, _mm512_set1_epi8,
+            };
+
+            let chunk = _mm512_loadu_si512(self[..64.min(self.len())].as_ptr() as *const __m512i);
+            let semi = _mm512_set1_epi8(b';' as i8);
+            let nl = _mm512_set1_epi8(b'\n' as i8);
+            let semi_mask = _mm512_cmpeq_epi8_mask(chunk, semi);
+            let nl_mask = _mm512_cmpeq_epi8_mask(chunk, nl);
+
+            (semi_mask, nl_mask)
+        };
+
+        (semi, nl)
     }
 
     #[inline(always)]

@@ -66,3 +66,7 @@ path = "src/bin/009_batching.rs"
 [[bin]]
 name = "mmap"
 path = "src/bin/010_mmap.rs"
+
+[[bin]]
+name = "avx512"
+path = "src/bin/011_avx512.rs"

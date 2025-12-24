@@ -54,17 +54,17 @@ fn main() -> io::Result<()> {
     let mut cursor_c = 0;
 
     while cursor_a < region_a.len() && cursor_b < region_b.len() && cursor_c < region_c.len() {
-        let end_a = cursor_a + 32.min(region_a.len() - cursor_a);
-        let end_b = cursor_b + 32.min(region_b.len() - cursor_b);
-        let end_c = cursor_c + 32.min(region_c.len() - cursor_c);
+        let end_a = cursor_a + 64.min(region_a.len() - cursor_a);
+        let end_b = cursor_b + 64.min(region_b.len() - cursor_b);
+        let end_c = cursor_c + 64.min(region_c.len() - cursor_c);
 
         let window_a = &region_a[cursor_a..end_a];
         let window_b = &region_b[cursor_b..end_b];
         let window_c = &region_c[cursor_c..end_c];
 
-        let (mut semi_a, mut nl_a) = window_a.find_delimiters();
-        let (mut semi_b, mut nl_b) = window_b.find_delimiters();
-        let (mut semi_c, mut nl_c) = window_c.find_delimiters();
+        let (mut semi_a, mut nl_a) = window_a.find_delimiters64();
+        let (mut semi_b, mut nl_b) = window_b.find_delimiters64();
+        let (mut semi_c, mut nl_c) = window_c.find_delimiters64();
 
         if nl_a == 0 {
             cursor_a = process_long_line(region_a, &mut tbl, cursor_a, region_a.len());
@@ -185,9 +185,9 @@ fn cleanup_region(tbl: &mut Table, region: &[u8], cursor: usize) {
     let mut cursor = cursor;
 
     while cursor < region.len() {
-        let end_a = cursor + 32.min(region.len() - cursor);
+        let end_a = cursor + 64.min(region.len() - cursor);
         let window_a = &region[cursor..end_a];
-        let (mut semi_a, mut nl_a) = window_a.find_delimiters();
+        let (mut semi_a, mut nl_a) = window_a.find_delimiters64();
 
         if nl_a == 0 {
             cursor = process_long_line(region, tbl, cursor, region.len());
@@ -224,7 +224,7 @@ fn process_long_line(buf: &[u8], tbl: &mut Table, start: usize, end: usize) -> u
 }
 
 #[inline(always)]
-fn process_line(buf: &[u8], tbl: &mut Table, start: usize, semi: u32, nl: u32) -> usize {
+fn process_line(buf: &[u8], tbl: &mut Table, start: usize, semi: u64, nl: u64) -> usize {
     let semi_pos = semi.trailing_zeros() as usize;
     let nl_pos = nl.trailing_zeros() as usize;
 

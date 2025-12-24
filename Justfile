@@ -32,3 +32,6 @@ callgrind BIN: (build BIN)
     rm -f ./profiling/callgrind_{{BIN}}_demangled.out
     rustfilt -i ./profiling/callgrind_{{BIN}}.out -o ./profiling/callgrind_{{BIN}}_demangled.out
 
+perfstats BIN:
+    perf stat -e cpu-cycles,L1-dcache-load,L1-dcache-load-misses,LLC-load,LLC-load-misses,instructions,branches,branch-misses \
+        './target/release/{{BIN}}' {{test_path}} 1> /dev/null

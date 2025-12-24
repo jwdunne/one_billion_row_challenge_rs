@@ -205,3 +205,14 @@ Although impossible to eliminate all branching from the hash computation, we sig
 Experimented with processing multiple, independent regions at once, to encourage instruction-level processing. This was a modest success, though we're hitting marginal gains territory right now. I may experiment with the number of interleaved regions - right now it's 4 and it seems we spend roughly half the time in cleanup.
 
 Branching in `Table::lookup` was also eliminated. With the configured table size, probe depth never goes beyond 5.
+
+### 10. Memory-mapped buffer
+
+| | |
+| -- | -- |
+| Binary | `mmap` |
+| Mean running time (10m) | 225ms (+/- 2.3ms) |
+
+Quick change. Instead of manually managing buffers and all the bookkeeping that comes with it, we memory map the file.
+
+I wasn't happy with the additional complexity of 4 subdivided regions, so I've reduced this to 3 at no cost to performance.

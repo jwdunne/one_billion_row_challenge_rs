@@ -70,3 +70,7 @@ path = "src/bin/010_mmap.rs"
 [[bin]]
 name = "avx512"
 path = "src/bin/011_avx512.rs"
+
+[[bin]]
+name = "simd_lookup"
+path = "src/bin/012_simd_lookup.rs"

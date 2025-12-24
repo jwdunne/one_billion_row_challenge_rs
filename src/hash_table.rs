@@ -6,9 +6,6 @@ const MAGIC_CONST: i64 = 0x9E3779B97F4A7C15u64 as i64;
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 #[repr(C)]
 pub struct Entry {
-    hash: u64,
-    prefix: u64,
-
     pub sum: i32,
     pub count: u16,
     pub min: i16,
@@ -18,6 +15,8 @@ pub struct Entry {
 }
 
 pub struct Table {
+    hash: Vec<u64>,
+    prefix: Vec<u64>,
     data: Vec<Entry>,
     names: Vec<[u8; 128]>,
     size: usize,
@@ -26,6 +25,8 @@ pub struct Table {
 impl Table {
     pub fn new(size: usize) -> Self {
         Self {
+            hash: vec![0u64; size],
+            prefix: vec![0u64; size],
             data: vec![Entry::default(); size],
             names: vec![[0u8; 128]; size],
             size,
@@ -75,22 +76,65 @@ impl Table {
         }
     }
 
+    #[cfg(all(target_feature = "avx512f", target_feature = "avx512bw"))]
     #[inline(always)]
     pub fn lookup(&self, hash: u64, prefix: u64) -> usize {
         let size_mask = self.size - 1;
         let slot = hash as usize & size_mask;
 
-        let d0 = unsafe { self.data.get_unchecked(slot) };
-        let d1 = unsafe { self.data.get_unchecked((slot + 1) & size_mask) };
-        let d2 = unsafe { self.data.get_unchecked((slot + 2) & size_mask) };
-        let d3 = unsafe { self.data.get_unchecked((slot + 3) & size_mask) };
-        let d4 = unsafe { self.data.get_unchecked((slot + 4) & size_mask) };
+        unsafe {
+            #[cfg(target_arch = "x86")]
+            use std::arch::x86::{
+                __m512i, _mm512_cmpeq_epi64_mask, _mm512_loadu_si512, _mm512_set1_epi64,
+                _mm512_setzero_si512,
+            };
 
-        let m0 = ((d0.hash == 0) | ((d0.hash == hash) & (d0.prefix == prefix))) as u32;
-        let m1 = ((d1.hash == 0) | ((d1.hash == hash) & (d1.prefix == prefix))) as u32;
-        let m2 = ((d2.hash == 0) | ((d2.hash == hash) & (d2.prefix == prefix))) as u32;
-        let m3 = ((d3.hash == 0) | ((d3.hash == hash) & (d3.prefix == prefix))) as u32;
-        let m4 = ((d4.hash == 0) | ((d4.hash == hash) & (d4.prefix == prefix))) as u32;
+            #[cfg(target_arch = "x86_64")]
+            use std::arch::x86_64::{
+                __m512i, _mm512_cmpeq_epi64_mask, _mm512_loadu_si512, _mm512_set1_epi64,
+                _mm512_setzero_si512,
+            };
+
+            let h = _mm512_loadu_si512(self.hash[slot..].as_ptr() as *const __m512i);
+            let target_h = _mm512_set1_epi64(hash as i64);
+            let match_h = _mm512_cmpeq_epi64_mask(h, target_h);
+
+            let p = _mm512_loadu_si512(self.prefix[slot..].as_ptr() as *const __m512i);
+            let target_p = _mm512_set1_epi64(prefix as i64);
+            let match_p = _mm512_cmpeq_epi64_mask(p, target_p);
+
+            let zero = _mm512_setzero_si512();
+            let empty = _mm512_cmpeq_epi64_mask(h, zero);
+
+            let matches = empty | (match_h & match_p);
+
+            (slot + matches.trailing_zeros() as usize) & size_mask
+        }
+    }
+
+    #[cfg(not(any(target_feature = "avx512f", target_feature = "avx512bw")))]
+    #[inline(always)]
+    pub fn lookup(&self, hash: u64, prefix: u64) -> usize {
+        let size_mask = self.size - 1;
+        let slot = hash as usize & size_mask;
+
+        let &h0 = unsafe { self.hash.get_unchecked(slot) };
+        let &h1 = unsafe { self.hash.get_unchecked((slot + 1) & size_mask) };
+        let &h2 = unsafe { self.hash.get_unchecked((slot + 2) & size_mask) };
+        let &h3 = unsafe { self.hash.get_unchecked((slot + 3) & size_mask) };
+        let &h4 = unsafe { self.hash.get_unchecked((slot + 4) & size_mask) };
+
+        let &p0 = unsafe { self.prefix.get_unchecked(slot) };
+        let &p1 = unsafe { self.prefix.get_unchecked((slot + 1) & size_mask) };
+        let &p2 = unsafe { self.prefix.get_unchecked((slot + 2) & size_mask) };
+        let &p3 = unsafe { self.prefix.get_unchecked((slot + 3) & size_mask) };
+        let &p4 = unsafe { self.prefix.get_unchecked((slot + 4) & size_mask) };
+
+        let m0 = ((h0 == 0) | ((h0 == hash) & (p0 == prefix))) as u32;
+        let m1 = ((h1 == 0) | ((h1 == hash) & (p1 == prefix))) as u32;
+        let m2 = ((h2 == 0) | ((h2 == hash) & (p2 == prefix))) as u32;
+        let m3 = ((h3 == 0) | ((h3 == hash) & (p3 == prefix))) as u32;
+        let m4 = ((h4 == 0) | ((h4 == hash) & (p4 == prefix))) as u32;
 
         let mask = m0 | (m1 << 1) | (m2 << 2) | (m3 << 3) | (m4 << 4);
         let first = mask.trailing_zeros() as usize;
@@ -103,7 +147,7 @@ impl Table {
         let len = name.len();
         let entry = unsafe { self.data.get_unchecked_mut(slot) };
 
-        if entry.hash != 0 {
+        if entry.len != 0 {
             entry.sum += temp as i32;
             entry.count += 1;
             entry.min = entry.min.min(temp);
@@ -111,14 +155,14 @@ impl Table {
             return;
         }
 
-        entry.hash = hash;
-        entry.prefix = prefix;
         entry.sum = temp as i32;
         entry.count = 1;
         entry.min = temp;
         entry.max = temp;
         entry.len = len as u8;
 
+        self.hash[slot] = hash;
+        self.prefix[slot] = prefix;
         self.names[slot][..len].copy_from_slice(name);
     }
 
